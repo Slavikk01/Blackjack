@@ -133,9 +133,9 @@ class BlackjackGame:
             print("\n1 - Hit (взяти карту)")
             print("2 - Stand (зупинитися)")
 
-            choice = input("Ваш вибір: ")
+            action = self._player.choose_action()
 
-            if choice == "1":
+            if action == "hit":
                 new_card = self._deck.draw_card()
                 self._player.hand.add_card(new_card)
 
@@ -144,12 +144,9 @@ class BlackjackGame:
 
                 if self._player.hand.is_bust:
                     break
-            elif choice == "2":
+            else:
                 print("Ви зупинилися.")
                 break
-
-            else:
-                print("Невірний вибір.")
 
     # ------------------------------------------------------
     # Хід дилера
@@ -160,7 +157,7 @@ class BlackjackGame:
         print(f"Карти дилера: {self._dealer.hand.show_cards()}")
         print(f"Рахунок дилера: {self._dealer.score}")
 
-        while self._dealer.must_hit():
+        while self._dealer.choose_action() == "hit":
             new_card = self._deck.draw_card()
             self._dealer.hand.add_card(new_card)
 

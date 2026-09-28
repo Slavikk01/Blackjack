@@ -43,3 +43,12 @@ class Player(Participant):
     def push(self):
         self._money += self._bet
         self._bet = 0
+
+    def choose_action(self):
+        while True:
+            choice = input("Ваш вибір: ")
+            if choice == "1":
+                return "hit"
+            if choice == "2":
+                return "stand"
+            print("Невірний вибір.")
