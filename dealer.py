@@ -11,3 +11,6 @@ class Dealer(Participant):
             return True
 
         return False
+
+    def choose_action(self):
+        return "hit" if self.must_hit() else "stand"
