@@ -1,5 +1,6 @@
 from dealer import Dealer
 from deck import Deck
+from participant import Participant
 from player import Player
 from rules import Rules
 
@@ -9,6 +10,10 @@ class BlackjackGame:
         self._deck = Deck()
         self._player = Player(player_name)
         self._dealer = Dealer()
+        self._participants: list[Participant] = [
+            self._player,
+            self._dealer
+        ]
         self._rules = Rules()
         self._round_number = 0
         self._game_over = False
@@ -26,6 +31,10 @@ class BlackjackGame:
         return self._dealer
 
     @property
+    def participants(self):
+        return self._participants
+
+    @property
     def rules(self):
         return self._rules
 
@@ -36,6 +45,15 @@ class BlackjackGame:
     @property
     def game_over(self):
         return self._game_over
+
+    def choose_participant_actions(self):
+        actions = []
+
+        for participant in self._participants:
+            action = participant.choose_action()
+            actions.append(action)
+
+        return actions
 
     # ------------------------------------------------------
     # Нова гра
@@ -120,29 +138,31 @@ class BlackjackGame:
     # Хід гравця
     # ------------------------------------------------------
     def player_turn(self):
+        participant: Participant = self._player
+
         while True:
             print("\n" + "-" * 40)
             print("Ваш хід")
-            print(f"Карти: {self._player.hand.show_cards()}")
-            print(f"Рахунок: {self._player.hand.score}")
+            print(f"Карти: {participant.hand.show_cards()}")
+            print(f"Рахунок: {participant.hand.score}")
 
-            if self._player.hand.score == 21:
+            if participant.hand.score == 21:
                 print("У вас 21!")
                 break
 
             print("\n1 - Hit (взяти карту)")
             print("2 - Stand (зупинитися)")
 
-            action = self._player.choose_action()
+            action = participant.choose_action()
 
             if action == "hit":
                 new_card = self._deck.draw_card()
-                self._player.hand.add_card(new_card)
+                participant.hand.add_card(new_card)
 
                 print(f"\nВи отримали: {new_card}")
-                print(f"Новий рахунок: {self._player.hand.score}")
+                print(f"Новий рахунок: {participant.hand.score}")
 
-                if self._player.hand.is_bust:
+                if participant.hand.is_bust:
                     break
             else:
                 print("Ви зупинилися.")
@@ -152,22 +172,24 @@ class BlackjackGame:
     # Хід дилера
     # ------------------------------------------------------
     def dealer_turn(self):
+        participant: Participant = self._dealer
+
         print("\n" + "-" * 40)
         print("Хід дилера")
-        print(f"Карти дилера: {self._dealer.hand.show_cards()}")
-        print(f"Рахунок дилера: {self._dealer.score}")
+        print(f"Карти дилера: {participant.hand.show_cards()}")
+        print(f"Рахунок дилера: {participant.score}")
 
-        while self._dealer.choose_action() == "hit":
+        while participant.choose_action() == "hit":
             new_card = self._deck.draw_card()
-            self._dealer.hand.add_card(new_card)
+            participant.hand.add_card(new_card)
 
             print(f"Дилер бере карту: {new_card}")
-            print(f"Новий рахунок дилера: {self._dealer.score}")
+            print(f"Новий рахунок дилера: {participant.score}")
 
-        if self._dealer.hand.is_bust:
+        if participant.hand.is_bust:
             print("Дилер перебрав 21!")
         else:
-            print(f"Дилер зупинився на {self._dealer.score}.")
+            print(f"Дилер зупинився на {participant.score}.")
 
     # ------------------------------------------------------
     # Завершення раунду
