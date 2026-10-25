@@ -1,11 +1,12 @@
 from dealer import Dealer
 from deck import Deck
+from game_interface import GameInterface
 from participant import Participant
 from player import Player
 from rules import Rules
 
 
-class BlackjackGame:
+class BlackjackGame(GameInterface):
     def __init__(self, player_name):
         self._deck = Deck()
         self._player = Player(player_name)
@@ -35,6 +36,10 @@ class BlackjackGame:
         return self._participants
 
     @property
+    def players(self):
+        return self._participants
+
+    @property
     def rules(self):
         return self._rules
 
@@ -54,6 +59,14 @@ class BlackjackGame:
             actions.append(action)
 
         return actions
+
+    def make_move(self, player: Participant) -> str:
+        action = player.choose_action()
+
+        if action == "hit":
+            player.hand.add_card(self._deck.draw_card())
+
+        return action
 
     # ------------------------------------------------------
     # Нова гра
@@ -153,12 +166,10 @@ class BlackjackGame:
             print("\n1 - Hit (взяти карту)")
             print("2 - Stand (зупинитися)")
 
-            action = participant.choose_action()
+            action = self.make_move(participant)
 
             if action == "hit":
-                new_card = self._deck.draw_card()
-                participant.hand.add_card(new_card)
-
+                new_card = participant.hand.cards[-1]
                 print(f"\nВи отримали: {new_card}")
                 print(f"Новий рахунок: {participant.hand.score}")
 
@@ -179,10 +190,8 @@ class BlackjackGame:
         print(f"Карти дилера: {participant.hand.show_cards()}")
         print(f"Рахунок дилера: {participant.score}")
 
-        while participant.choose_action() == "hit":
-            new_card = self._deck.draw_card()
-            participant.hand.add_card(new_card)
-
+        while self.make_move(participant) == "hit":
+            new_card = participant.hand.cards[-1]
             print(f"Дилер бере карту: {new_card}")
             print(f"Новий рахунок дилера: {participant.score}")
 
