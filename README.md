@@ -11,6 +11,14 @@
 python main.py
 ```
 
+## Тести
+
+Запустіть усі unit-тести командою:
+
+```bash
+python -m unittest discover -v
+```
+
 ## Функції
 
 - роздача карт
