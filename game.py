@@ -1,9 +1,14 @@
+
 from dealer import Dealer
 from deck import Deck
 from game_interface import GameInterface
 from participant import Participant
 from player import Player
 from rules import Rules
+from logger import get_logger
+
+
+logger = get_logger(__name__)
 
 
 class BlackjackGame(GameInterface):
@@ -18,6 +23,8 @@ class BlackjackGame(GameInterface):
         self._rules = Rules()
         self._round_number = 0
         self._game_over = False
+
+        logger.info("Blackjack game initialized for player: %s", player_name)
 
     @property
     def deck(self):
@@ -63,8 +70,21 @@ class BlackjackGame(GameInterface):
     def make_move(self, player: Participant) -> str:
         action = player.choose_action()
 
+        participant_name = (
+            "player" if player is self._player else "dealer"
+        )
+
+        logger.info("%s chose action: %s", participant_name, action)
+
         if action == "hit":
-            player.hand.add_card(self._deck.draw_card())
+            card = self._deck.draw_card()
+            player.hand.add_card(card)
+
+            logger.info(
+                "%s drew a card. Current score: %s",
+                participant_name,
+                player.hand.score
+            )
 
         return action
 
@@ -73,6 +93,8 @@ class BlackjackGame(GameInterface):
     # ------------------------------------------------------
     def start_round(self):
         self._round_number += 1
+
+        logger.info("Round %s started", self._round_number)
 
         self._player.reset_hand()
         self._dealer.reset_hand()
@@ -89,9 +111,17 @@ class BlackjackGame(GameInterface):
                 bet = int(input("Введіть вашу ставку: "))
 
                 if self._player.place_bet(bet):
+                    logger.info(
+                        "Player placed a bet: %s. Balance: %s",
+                        bet,
+                        self._player.money
+                    )
                     break
+                else:
+                    logger.warning("Invalid bet amount: %s", bet)
 
             except ValueError:
+                logger.warning("Player entered an invalid bet value")
                 print("Введіть ціле число.")
 
         # Роздача карт
@@ -99,9 +129,13 @@ class BlackjackGame(GameInterface):
 
         # Перевірка Blackjack
         if self._player.hand.is_blackjack:
+            logger.info("Player has Blackjack")
+
             print("\nУ вас BLACKJACK!")
 
             if self._dealer.hand.is_blackjack:
+                logger.info("Both player and dealer have Blackjack")
+
                 print("У дилера також BLACKJACK!")
                 self._player.push()
             else:
@@ -112,6 +146,8 @@ class BlackjackGame(GameInterface):
 
         # Якщо дилер має Blackjack
         if self._dealer.hand.is_blackjack:
+            logger.info("Dealer has Blackjack")
+
             print("\nУ дилера BLACKJACK!")
             self._player.lose()
             return
@@ -120,6 +156,11 @@ class BlackjackGame(GameInterface):
 
         # Якщо гравець перебрав
         if self._player.hand.is_bust:
+            logger.info(
+                "Player went bust with score: %s",
+                self._player.hand.score
+            )
+
             print("Ви перебрали 21.")
             self._player.lose()
             return
@@ -140,6 +181,12 @@ class BlackjackGame(GameInterface):
         self._dealer.hand.add_card(self._deck.draw_card())
         self._dealer.hand.add_card(self._deck.draw_card())
 
+        logger.info(
+            "Initial cards dealt. Player score: %s, dealer score: %s",
+            self._player.hand.score,
+            self._dealer.hand.score
+        )
+
         print("\nВаші карти:")
         print(self._player.hand.show_cards())
         print(f"Ваш рахунок: {self._player.hand.score}")
@@ -153,6 +200,8 @@ class BlackjackGame(GameInterface):
     def player_turn(self):
         participant: Participant = self._player
 
+        logger.info("Player turn started")
+
         while True:
             print("\n" + "-" * 40)
             print("Ваш хід")
@@ -160,6 +209,8 @@ class BlackjackGame(GameInterface):
             print(f"Рахунок: {participant.hand.score}")
 
             if participant.hand.score == 21:
+                logger.info("Player reached 21")
+
                 print("У вас 21!")
                 break
 
@@ -176,14 +227,22 @@ class BlackjackGame(GameInterface):
                 if participant.hand.is_bust:
                     break
             else:
+                logger.info("Player decided to stand")
                 print("Ви зупинилися.")
                 break
+
+        logger.info(
+            "Player turn finished. Final score: %s",
+            participant.hand.score
+        )
 
     # ------------------------------------------------------
     # Хід дилера
     # ------------------------------------------------------
     def dealer_turn(self):
         participant: Participant = self._dealer
+
+        logger.info("Dealer turn started")
 
         print("\n" + "-" * 40)
         print("Хід дилера")
@@ -196,8 +255,16 @@ class BlackjackGame(GameInterface):
             print(f"Новий рахунок дилера: {participant.score}")
 
         if participant.hand.is_bust:
+            logger.info(
+                "Dealer went bust with score: %s",
+                participant.hand.score
+            )
             print("Дилер перебрав 21!")
         else:
+            logger.info(
+                "Dealer stopped with score: %s",
+                participant.score
+            )
             print(f"Дилер зупинився на {participant.score}.")
 
     # ------------------------------------------------------
@@ -219,6 +286,8 @@ class BlackjackGame(GameInterface):
             self._dealer
         )
 
+        logger.info("Round result: %s", winner)
+
         if winner == "player":
             print("\nВи перемогли!")
             self._player.win()
@@ -235,12 +304,20 @@ class BlackjackGame(GameInterface):
             print("\nНічия!")
             self._player.push()
 
+        logger.info(
+            "Round %s finished. Player balance: %s",
+            self._round_number,
+            self._player.money
+        )
+
         print(f"Ваш баланс: ${self._player.money}")
 
     # ------------------------------------------------------
     # Запуск гри
     # ------------------------------------------------------
     def run(self):
+        logger.info("Blackjack game started")
+
         print("=" * 50)
         print("          BLACKJACK")
         print("=" * 50)
@@ -257,6 +334,8 @@ class BlackjackGame(GameInterface):
             self.start_round()
 
             if self._player.money <= 0:
+                logger.info("Player ran out of money")
+
                 print("\nУ вас закінчилися гроші.")
                 break
 
@@ -267,9 +346,15 @@ class BlackjackGame(GameInterface):
             choice = input("Ваш вибір: ")
 
             if choice != "1":
+                logger.info("Player decided to end the game")
                 break
 
         self._game_over = True
+
+        logger.info(
+            "Blackjack game finished. Final balance: %s",
+            self._player.money
+        )
 
         print("\n" + "=" * 50)
         print("ДЯКУЄМО ЗА ГРУ!")
