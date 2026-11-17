@@ -12,9 +12,9 @@ logger = get_logger(__name__)
 
 
 class BlackjackGame(GameInterface):
-    def __init__(self, player_name):
+    def __init__(self, player_name, starting_money=1000):
         self._deck = Deck()
-        self._player = Player(player_name)
+        self._player = Player(player_name, money=starting_money)
         self._dealer = Dealer()
         self._participants: list[Participant] = [
             self._player,
@@ -23,6 +23,7 @@ class BlackjackGame(GameInterface):
         self._rules = Rules()
         self._round_number = 0
         self._game_over = False
+        self._last_result = "Гру розпочато"
 
         logger.info("Blackjack game initialized for player: %s", player_name)
 
@@ -57,6 +58,10 @@ class BlackjackGame(GameInterface):
     @property
     def game_over(self):
         return self._game_over
+
+    @property
+    def last_result(self):
+        return self._last_result
 
     def choose_participant_actions(self):
         actions = []
@@ -138,9 +143,11 @@ class BlackjackGame(GameInterface):
 
                 print("У дилера також BLACKJACK!")
                 self._player.push()
+                self._last_result = "Нічия: Blackjack у гравця та дилера"
             else:
                 print("Ви перемогли!")
                 self._player.win(self._rules.blackjack_payout)
+                self._last_result = "Перемога гравця з Blackjack"
 
             return
 
@@ -150,6 +157,7 @@ class BlackjackGame(GameInterface):
 
             print("\nУ дилера BLACKJACK!")
             self._player.lose()
+            self._last_result = "Перемога дилера: Blackjack"
             return
 
         self.player_turn()
@@ -163,6 +171,7 @@ class BlackjackGame(GameInterface):
 
             print("Ви перебрали 21.")
             self._player.lose()
+            self._last_result = "Поразка гравця: перебір 21"
             return
 
         self.dealer_turn()
@@ -290,18 +299,22 @@ class BlackjackGame(GameInterface):
 
         if winner == "player":
             print("\nВи перемогли!")
+            self._last_result = "Перемога гравця"
             self._player.win()
 
         elif winner == "dealer":
             print("\nДилер переміг.")
+            self._last_result = "Перемога дилера"
             self._player.lose()
 
         elif winner == "blackjack":
             print("\nBLACKJACK! Ви перемогли!")
+            self._last_result = "Перемога гравця з Blackjack"
             self._player.win(self._rules.blackjack_payout)
 
         elif winner == "push":
             print("\nНічия!")
+            self._last_result = "Нічия"
             self._player.push()
 
         logger.info(
@@ -311,6 +324,27 @@ class BlackjackGame(GameInterface):
         )
 
         print(f"Ваш баланс: ${self._player.money}")
+
+    def save_round_result(self):
+        """Додає результат раунду та баланс до текстового файлу."""
+        from pathlib import Path
+        from datetime import datetime
+
+        from profile_manager import load_profiles, save_profiles
+
+        output_file = Path(__file__).parent / "results.txt"
+        with output_file.open("a", encoding="utf-8") as file:
+            file.write(
+                f"{datetime.now():%Y-%m-%d %H:%M:%S} | "
+                f"Гравець: {self._player.name} | Раунд: {self._round_number} | "
+                f"Результат: {self._last_result} | "
+                f"Баланс: {self._player.money} фішок\n"
+            )
+
+        # Зберігаємо баланс одразу після кожного раунду, а не лише після виходу.
+        profiles = load_profiles()
+        profiles[self._player.name] = self._player.money
+        save_profiles(profiles)
 
     # ------------------------------------------------------
     # Запуск гри
@@ -332,6 +366,7 @@ class BlackjackGame(GameInterface):
 
         while self._player.money > 0:
             self.start_round()
+            self.save_round_result()
 
             if self._player.money <= 0:
                 logger.info("Player ran out of money")
